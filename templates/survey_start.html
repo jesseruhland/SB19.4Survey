@@ -9,6 +9,8 @@
 {% block content %}
 <div>
   <p>{{instructions}}</p>
-  <a href="/questions/0"><button>Start the Survey</button></a>
+  <form action="/initialize-survey" method="POST">
+    <button>Start the Survey</button>
+  </form>
 </div>
 {% endblock %}

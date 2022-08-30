@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, flash
+from flask import Flask, request, render_template, redirect, flash, session
 from surveys import surveys
 
 # from flask_debugtoolbar import DebugToolbarExtension
@@ -16,6 +16,14 @@ def show_survey_start():
     title = surveys['satisfaction'].title
     instructions = surveys['satisfaction'].instructions
     return render_template("survey_start.html", title=title, instructions=instructions)
+    
+    
+@app.route("/initialize-survey", methods=["POST"])
+def initalize_survey():
+    """on button click, POST request to new route to set session response to new empty list"""
+    session["responses"] = []
+    return redirect("/questions/0")
+    
 
 @app.route("/questions/<int:num>")
 def display_question(num):
@@ -23,15 +31,17 @@ def display_question(num):
     automatically show the correct question if a user tries to manually change url,
     show thank you if user has answered all questions
     """
-    if num == len(responses):
+    if num == len(session["responses"]):
         title = surveys['satisfaction'].title
         question = surveys['satisfaction'].questions[num].question
         choices = surveys['satisfaction'].questions[num].choices
         return render_template("question.html", question=question, choices=choices, title=title, num=num)
-    elif num != len(responses) and len(responses) < len(surveys['satisfaction'].questions):
-        correct_num = len(responses)
+    
+    elif num != len(session["responses"]) and len(session["responses"]) < len(surveys['satisfaction'].questions):
+        correct_num = len(session["responses"])
         flash("Please complete the questions in order and only answer each question once.")
         return redirect(f"/questions/{correct_num}")
+    
     else:
         return redirect("/thank_you")
 
@@ -42,18 +52,24 @@ def save_answer():
     keys = list(response.keys())
     values = list(response.values())
     next_num = int(keys[0]) + 1
-    responses.append(values[0])
+
+    resp_list = session['responses']
+    resp_list.append(values[0])
+    session['responses'] = resp_list
+
     if next_num < len(surveys['satisfaction'].questions):
         return redirect(f"/questions/{next_num}")
+    
     else:
         return redirect("/thank_you")
 
 @app.route("/thank_you")
 def thank_you():
     """Display thank you page if user has answered all questions"""
-    if len(responses) == len(surveys['satisfaction'].questions):
+    if len(session['responses']) == len(surveys['satisfaction'].questions):
         return render_template("thank_you.html")
+    
     else:
-        correct_num = len(responses)
+        correct_num = len(session['responses'])
         flash("Please complete the questions in order and only answer each question once.")
         return redirect(f"/questions/{correct_num}")
